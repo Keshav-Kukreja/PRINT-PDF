@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link
+      rel="stylesheet"
+      href="{{url_for('static', filename='style/style.css')}}"
+    />
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <div id="actions">
+      <button id="previous"><<</button>
+      <h4 id="pageno">1</h4>
+      <button id="next">>></button>
+    </div>
+    <div id="options">
+      <button id="back_btn">Upload new</button>
+      <input id="printFrom" type="text" placeholder="#-#" />
+      <button id="print_btn">Print</button>
+    </div>
+    <script
+      src="{{url_for('static', filename='js/pdf.mjs')}}"
+      type="module"
+    ></script>
+    <script
+      src="{{url_for('static', filename='js/pdf.worker.mjs')}}"
+      type="module"
+    ></script>
+    <script type="module">
+      var zoomed = false;
+      var openPage = function (pdfFile, pageNumber) {
+        pdfFile.getPage(pageNumber).then(function (page) {
+          var scale = 1;
+          var viewport = page.getViewport({ scale: scale });
+          // change page no in pdf actions
+          var pageno = document.getElementById("pageno");
+          pageno.innerText = pageNumber;
+          // Prepare canvas using PDF page dimensions
+          var canvas = document.getElementById("canvas");
+          var context = canvas.getContext("2d");
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+
+          // Render PDF page into canvas context
+          var renderContext = {
+            canvasContext: context,
+            viewport: viewport,
+          };
+          var renderTask = page.render(renderContext);
+          renderTask.promise.then(function () {
+            console.log("Page rendered");
+          });
+        });
+      };
+      var loadingTask = pdfjsLib.getDocument(
+        "{{url_for('static', filename=file)}}"
+      );
+      loadingTask.promise
+        .then(function (pdf) {
+          openPage(pdf, 1);
+        })
+        .catch(function (error) {
+          // Handle any errors from loading the pdf file
+          console.error(error);
+        });
+
+      // this var stores the number of pages
+      var pageNum = await pdfjsLib
+        .getDocument("{{url_for('static', filename=file)}}")
+        .promise.then((pdf) => (pdf = pdf.numPages));
+      console.log(pageNum);
+
+      // stores the page number of pdf
+      var pageNo = 1;
+      // next btn click event
+      var nextBtn = document.getElementById("next");
+      nextBtn.addEventListener("click", function () {
+        if (pageNo != pageNum) {
+          pageNo++;
+          loadingTask.promise
+            .then(function (pdf) {
+              openPage(pdf, pageNo);
+            })
+            .catch(function (error) {
+              // Handle any errors from loading the pdf file
+              console.error(error);
+            });
+        }
+      });
+      // previous btn click event
+      var preBtn = document.getElementById("previous");
+      preBtn.addEventListener("click", function () {
+        if (pageNo > 1) {
+          pageNo--;
+          loadingTask.promise
+            .then(function (pdf) {
+              openPage(pdf, pageNo);
+            })
+            .catch(function (error) {
+              // Handle any errors from loading the pdf file
+              console.error(error);
+            });
+        } else {
+          pageNo = 1;
+        }
+      });
+    </script>
+    <script src="{{url_for('static', filename='js/main.js')}}"></script>
+    <script>
+      document.getElementById("print_btn").addEventListener("click", (e) => {
+        sendFileName("{{file}}");
+      });
+      console.log("ok");
+    </script>
+  </body>
+</html>
